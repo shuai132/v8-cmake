@@ -880,3 +880,18 @@ target_include_directories(v8-adler32
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/v8/third_party/zlib>
 )
+
+add_executable(hello demo/hello-world.cc)
+#target_compile_options(hello PRIVATE -Wno-unused-result)
+include_directories(
+        v8
+        v8/include
+)
+target_link_libraries(hello
+        PRIVATE
+        v8_base_without_compiler
+        v8_compiler
+        v8_snapshot
+        v8_inspector
+        v8_libplatform
+        )
