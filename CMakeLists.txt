@@ -882,7 +882,7 @@ target_include_directories(v8-adler32
 )
 
 add_executable(hello demo/hello-world.cc)
-#target_compile_options(hello PRIVATE -Wno-unused-result)
+target_compile_options(hello PRIVATE -Wno-unused-result)
 include_directories(
         v8
         v8/include
