@@ -41,7 +41,8 @@ string(CONCAT is-posix $<OR:
   ${is-linux},
   ${is-aix}
 >)
-
+set(is-posix 1)
+link_libraries(log)
 set(is-msvc $<CXX_COMPILER_ID:MSVC>)
 
 # FIXME obviously
