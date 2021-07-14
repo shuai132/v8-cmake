@@ -1,19 +1,22 @@
-//
-func1();
 
-//
-MyObject.func();
+var Benchmark = require('benchmark.js');
+var suite = new Benchmark.Suite;
 
-//
-let myClass = new MyClass();
-myClass.func();
-
-//
-console.log("BCanvas 1");
-let obj = new BCanvas.GlobalUtils.Instance();
-console.log("BCanvas 2");
-
-console.log("type: ", obj.type);
-
-// end
-(function (){ return "test end!"; })();
+// add tests
+suite.add('RegExp#test', function () {
+  /o/.test('Hello World!');
+})
+  .add('String#indexOf', function () {
+    'Hello World!'.indexOf('o') > -1;
+  })
+  // add listeners
+  .on('cycle', function (event) {
+    console.log(String(event.target));
+  })
+  .on('complete', function () {
+    console.log('Fastest is ' + this.filter('fastest').map('name'));
+  })
+  // run async
+  .run({
+    'async': true
+  });
