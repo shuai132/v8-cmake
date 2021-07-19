@@ -1,0 +1,40 @@
+
+2021-07-15 19:08:35.366 18273-18342/com.bilibili.lib.fasthybrid.example E/==trace==: service.js cost[449] , d[808]
+2021-07-15 19:09:09.108 18962-19030/com.bilibili.lib.fasthybrid.example E/==trace==: service.js cost[424] , d[778]
+
+x5
+2021-07-15 19:46:49.059 21468-21468/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[467] , d[827]
+2021-07-15 19:47:48.184 21906-21906/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[435] , d[793]
+2021-07-15 19:48:07.180 22311-22311/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[442] , d[798]
+
+
+
+
+
+小米mix
+2021-07-15 19:54:52.984 12108-12175/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[668] , d[1192]
+2021-07-15 19:55:14.409 12575-12642/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[555] , d[1044]
+2021-07-15 19:55:55.187 13052-13119/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[600] , d[1083]
+2021-07-15 19:56:23.491 13527-13596/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[600] , d[1073]
+2021-07-15 19:56:52.979 13994-14061/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[588] , d[1075]
+2021-07-15 19:57:38.656 14466-14533/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[561] , d[1032]
+2021-07-15 20:00:52.947 17242-17316/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[616] , d[1108]
+2021-07-15 20:01:12.153 17697-17765/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[634] , d[1179]
+2021-07-15 20:01:34.245 18163-18233/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[625] , d[1200]
+
+x5
+2021-07-15 19:58:39.757 14965-14965/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[573] , d[1043]
+2021-07-15 19:59:06.952 15429-15429/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[550] , d[1046]
+2021-07-15 19:59:32.435 15876-15876/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[569] , d[1045]
+2021-07-15 19:59:51.158 16322-16322/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[552] , d[1023]
+2021-07-15 20:00:08.807 16762-16762/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[542] , d[1015]
+
+
+骁龙865
+2021-07-15 20:15:16.226 24706-24824/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[152] , d[378]
+2021-07-15 20:15:34.717 25215-25332/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[164] , d[406]
+2021-07-15 20:15:48.488 25720-25834/com.bilibili.lib.fasthybrid.example E/==trace== v8: service.js cost[142] , d[375]
+x5
+2021-07-15 20:16:27.271 26488-26488/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[241] , d[462]
+2021-07-15 20:16:45.107 27008-27008/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[250] , d[467]
+2021-07-15 20:16:58.890 27548-27548/com.bilibili.lib.fasthybrid.example E/==trace== x5 b: service.js cost[228] , d[457]
