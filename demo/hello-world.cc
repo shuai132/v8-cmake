@@ -4,6 +4,7 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 #include "log.h"
+#include "Time.h"
 
 std::string readFile(const std::string& filePath) {
     std::ifstream fs(filePath);
@@ -141,6 +142,11 @@ int main(int argc, char* argv[]) {
 
             // Compile the source code.
             v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
+
+//            v8::ScriptCompiler::Source source(js_source, origin);
+////            compile_script = v8::ScriptCompiler::Compile(context, &source, v8::ScriptCompiler::kConsumeCodeCache);
+//            auto unbounded_script = v8::ScriptCompiler::CompileUnboundScript(isolate, &source, v8::ScriptCompiler::kEagerCompile).ToLocalChecked();
+//            auto cache = v8::ScriptCompiler::CreateCodeCache(unbounded_script);
 
             // Run the script to get the result.
             v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
