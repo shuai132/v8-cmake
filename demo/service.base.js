@@ -4,6 +4,11 @@
  * (c) 2014-2021 Evan You
  * Released under the MIT License.
  */
+
+function f(num) {
+    console.log(num, result);
+}
+
 bl = function () {}
 Service = function (){}
 console = function (){}

@@ -13,10 +13,11 @@ std::string readFile(const std::string& filePath) {
     return ss.str();
 }
 
-int main(int argc, char* argv[]) {
-    std::string flags = "--prof";
-    v8::V8::SetFlagsFromString(flags.c_str(), flags.size());
+static void compileAndRun(v8::Local<v8::Context> context, const char* script) {
+    v8::Script::Compile(context, v8::String::NewFromUtf8(context->GetIsolate(), script).ToLocalChecked()).ToLocalChecked()->Run(context);
+}
 
+int main(int argc, char* argv[]) {
     // Initialize V8.
     TimeTracker tracker1;
     v8::V8::InitializeICUDefaultLocation(argv[0]);
@@ -25,13 +26,14 @@ int main(int argc, char* argv[]) {
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();
     tracker1.track("Initialize");
-    tracker1.report();
 
     // Create a new Isolate and make it the current one.
     v8::Isolate::CreateParams create_params;
     create_params.array_buffer_allocator =
             v8::ArrayBuffer::Allocator::NewDefaultAllocator();
     v8::Isolate* isolate = v8::Isolate::New(create_params);
+    tracker1.track("v8::Isolate::New(create_params)");
+    tracker1.report();
 
     {
         v8::Isolate::Scope isolate_scope(isolate);
@@ -40,7 +42,9 @@ int main(int argc, char* argv[]) {
         v8::HandleScope handle_scope(isolate);
 
         // Create a new context.
+        tracker1.track("");
         v8::Local<v8::Context> context = v8::Context::New(isolate);
+        tracker1.track("v8::Context::New(isolate)");
 
         // Enter the context for compiling and running the hello world script.
         v8::Context::Scope context_scope(context);
@@ -79,8 +83,8 @@ int main(int argc, char* argv[]) {
 
             v8::ScriptCompiler::Source source(script_source);
             tracker.track("ScriptCompiler::Compile");
-            auto unbounded_script = v8::ScriptCompiler::CompileUnboundScript(isolate, &source, v8::ScriptCompiler::kNoCompileOptions).ToLocalChecked();
-            tracker.track("CreateCodeCache");
+//            auto unbounded_script = v8::ScriptCompiler::CompileUnboundScript(isolate, &source, v8::ScriptCompiler::kNoCompileOptions).ToLocalChecked();
+//            tracker.track("CreateCodeCache");
             // Compile the source code.
             v8::Local<v8::Script> script = v8::Script::Compile(context, script_source).ToLocalChecked();
             tracker.track("Compile");
@@ -90,6 +94,7 @@ int main(int argc, char* argv[]) {
             tracker.track("Run");
             tracker.report();
 
+            compileAndRun(context, "f(1)");
             // Print result
             auto r = result->ToString(context).ToLocalChecked();
             v8::String::Utf8Value sss(isolate, r);
