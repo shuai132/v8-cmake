@@ -53,8 +53,11 @@ public:
         if (access(file.c_str(), 0) != 0) {
             return false;
         }
-
+        TimeTracker tracker;
         fileData = readFile(file);
+        tracker.track("readFile");
+        tracker.report();
+
         startupData = {
                 fileData.data(),
                 static_cast<int>(fileData.size())
@@ -135,14 +138,11 @@ int main(int argc, char* argv[]) {
     v8::Local<v8::Context> context;
 
     SnapshotLoader snapshotLoader(&create_params);
+    SnapshotCreator snapshotCreator; // todo: free
     if (!snapshotLoader.load(SNAPSHOT_FILE)) {
-        //snapshotLoad(create_params, isolate, context, SNAPSHOT_FILE, startupDataLoader)) {
-        TimeTracker tracker;
         auto str = readFile(argv[1]);
-        tracker.track("readFile");
-        SnapshotCreator snapshotCreator;
         snapshotCreator.create(str.c_str(), SNAPSHOT_FILE);
-        assert(snapshotLoader.load(snapshotCreator.startupData));
+        snapshotLoader.load(SNAPSHOT_FILE);
     }
     isolate = snapshotLoader.isolate;
     timeTracker.track("snapshotLoad total");
@@ -154,7 +154,6 @@ int main(int argc, char* argv[]) {
         v8::HandleScope handle_scope(isolate);
 
         // Create the Context from the snapshot index.
-        context = v8::Context::FromSnapshot(isolate, 0).ToLocalChecked();
         context = snapshotLoader.createContext(0);
         timeTracker.track("v8::Context::FromSnapshot");
         snapshotLoader.freeData();
@@ -180,6 +179,7 @@ int main(int argc, char* argv[]) {
             global->Set(context, v8::String::NewFromUtf8(isolate, "console").ToLocalChecked(), console);
         }
 
+        printf("!!!\n");
         compileAndRun(context, "f(1)");
     }
 
