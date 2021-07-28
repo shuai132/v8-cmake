@@ -91,8 +91,9 @@ public:
     void create(const char* js, const std::string& snapshotFile) {
         using namespace v8;
         TimeTracker tracker;
-        v8::SnapshotCreator snapshot_creator;
-        Isolate* isolate = snapshot_creator.GetIsolate();
+        Isolate* isolate = Isolate::Allocate();
+        std::vector<intptr_t> external_references = { reinterpret_cast<intptr_t>(nullptr)};
+        v8::SnapshotCreator snapshot_creator(isolate, external_references.data());
         tracker.track("snapshot_creator");
         {
             HandleScope scope(isolate);
@@ -106,13 +107,13 @@ public:
             }
             auto index = snapshot_creator.AddContext(context);
             tracker.track("Compile & Run");
-            printf("context index: %zu\n", index);
+            LOGI("context index: %zu", index);
         }
         startupData = snapshot_creator.CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kKeep);
         tracker.track("CreateBlob");
         writeFile(startupData.data, startupData.raw_size, SNAPSHOT_FILE);
         tracker.track("writeFile");
-        printf("size of blob: %d %.2fk\n", startupData.raw_size, startupData.raw_size / 1024.f);
+        LOGI("size of blob: %d %.2fk", startupData.raw_size, startupData.raw_size / 1024.f);
         tracker.report();
     }
 
@@ -179,7 +180,7 @@ int main(int argc, char* argv[]) {
             global->Set(context, v8::String::NewFromUtf8(isolate, "console").ToLocalChecked(), console);
         }
 
-        printf("!!!\n");
+        LOGI("!!!");
         compileAndRun(context, "f(1)");
     }
 

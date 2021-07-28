@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include "log.h"
+
 using namespace std::chrono;
 
 class TimeTracker {
@@ -18,17 +20,17 @@ public:
     }
 
     void report() {
-        printf("TimeTracker report:\n");
+        LOGI("TimeTracker report:");
         if (items.empty()) {
-            printf("  nothing to report\n");
+            LOGI("  nothing to report");
             return;
         }
         long lastItemTime = items[0].time;
         for (const auto& item : items) {
-            printf("  %s: %ld\n", item.name.c_str(), item.time - lastItemTime);
+            LOGI("  %s: %ld", item.name.c_str(), item.time - lastItemTime);
             lastItemTime = item.time;
         }
-        printf("------\n");
+        LOGI("------\n");
     }
 private:
     struct Item {
