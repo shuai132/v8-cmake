@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <sstream>
+#include <utility>
 #include <unistd.h>
 
 #include "include/libplatform/libplatform.h"
@@ -26,73 +27,97 @@ static void compileAndRun(v8::Local<v8::Context> context, const char* script) {
     v8::Script::Compile(context, v8::String::NewFromUtf8(context->GetIsolate(), script).ToLocalChecked()).ToLocalChecked()->Run(context);
 }
 
-void snapshotCreate(const char* js, const std::string& snapshotFile) {
-    using namespace v8;
-    TimeTracker tracker;
-    v8::SnapshotCreator snapshot_creator;
-    Isolate* isolate = snapshot_creator.GetIsolate();
-    tracker.track("snapshot_creator");
-    {
-        HandleScope scope(isolate);
-        snapshot_creator.SetDefaultContext(Context::New(isolate));
-        Local<Context> context = Context::New(isolate);
-        {
-            Context::Scope context_scope(context);
-            TryCatch try_catch(isolate);
-            compileAndRun(context, js);
-            assert(!try_catch.HasCaught());
-        }
-        auto index = snapshot_creator.AddContext(context);
-        tracker.track("Compile & Run");
-        printf("context index: %zu\n", index);
-    }
-    StartupData blob = snapshot_creator.CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kKeep);
-    tracker.track("CreateBlob");
-    writeFile(blob.data, blob.raw_size, SNAPSHOT_FILE);
-    tracker.track("writeFile");
-    printf("size of blob: %d\n", blob.raw_size);
-    tracker.report();
-}
-
 /**
  * load and keep data for v8::Context::FromSnapshot
  */
-class StartupDataLoader {
+class SnapshotLoader {
 public:
-    void load(const std::string& file) {
+    explicit SnapshotLoader(v8::Isolate::CreateParams* createParams)
+            : createParams(createParams) {}
+    SnapshotLoader(const SnapshotLoader&) = delete;
+    void operator=(const SnapshotLoader&) = delete;
+
+    bool load(v8::StartupData data) {
+        if (!data.IsValid()) return false;
+        startupData = data;
+
+        TimeTracker tracker;
+        createParams->snapshot_blob = &startupData;
+        isolate = v8::Isolate::New(*createParams);
+        tracker.track("Isolate::New from startupData");
+        tracker.report();
+        return true;
+    }
+
+    bool load(const std::string& file) {
+        if (access(file.c_str(), 0) != 0) {
+            return false;
+        }
+
         fileData = readFile(file);
         startupData = {
                 fileData.data(),
                 static_cast<int>(fileData.size())
         };
+        if (!load(startupData)) return false;
+        return true;
     }
+
+    v8::Local<v8::Context> createContext(size_t index) const {
+        return v8::Context::FromSnapshot(isolate, index).ToLocalChecked();
+    }
+
     void freeData() {
         fileData.clear();
         startupData = {};
     }
-    StartupDataLoader() = default;
-    StartupDataLoader(const StartupDataLoader&) = delete;
-    void operator=(const StartupDataLoader&) = delete;
 
+public:
+    v8::Isolate::CreateParams* createParams;
+    v8::Isolate* isolate{};
     std::string fileData;
     v8::StartupData startupData{};
 };
 
-bool snapshotLoad(v8::Isolate::CreateParams& create_params, v8::Isolate*& isolate, v8::Local<v8::Context>& context, const std::string& file, StartupDataLoader& loader) {
-    if (access(file.c_str(), 0) != 0) {
-        return false;
+class SnapshotCreator {
+public:
+    SnapshotCreator() = default;
+    SnapshotCreator(const SnapshotCreator&) = delete;
+    void operator=(const SnapshotCreator&) = delete;
+
+    void create(const char* js, const std::string& snapshotFile) {
+        using namespace v8;
+        TimeTracker tracker;
+        v8::SnapshotCreator snapshot_creator;
+        Isolate* isolate = snapshot_creator.GetIsolate();
+        tracker.track("snapshot_creator");
+        {
+            HandleScope scope(isolate);
+            snapshot_creator.SetDefaultContext(Context::New(isolate));
+            Local<Context> context = Context::New(isolate);
+            {
+                Context::Scope context_scope(context);
+                TryCatch try_catch(isolate);
+                compileAndRun(context, js);
+                assert(!try_catch.HasCaught());
+            }
+            auto index = snapshot_creator.AddContext(context);
+            tracker.track("Compile & Run");
+            printf("context index: %zu\n", index);
+        }
+        startupData = snapshot_creator.CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kKeep);
+        tracker.track("CreateBlob");
+        writeFile(startupData.data, startupData.raw_size, SNAPSHOT_FILE);
+        tracker.track("writeFile");
+        printf("size of blob: %d %.2fk\n", startupData.raw_size, startupData.raw_size / 1024.f);
+        tracker.report();
     }
 
-    TimeTracker tracker;
-    loader.load(file);
-    tracker.track("readFile");
+public:
+    v8::StartupData startupData{};
+};
 
-    create_params.snapshot_blob = &loader.startupData;
-    isolate = v8::Isolate::New(create_params);
-    tracker.track("Isolate::New from startup_data");
-    tracker.report();
-    return true;
-}
+
 
 int main(int argc, char* argv[]) {
     // Initialize V8.
@@ -104,20 +129,23 @@ int main(int argc, char* argv[]) {
     v8::V8::Initialize();
     timeTracker.track("Initialize");
 
-
     v8::Isolate::CreateParams create_params;
     create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
     v8::Isolate* isolate;
     v8::Local<v8::Context> context;
 
-    StartupDataLoader startupDataLoader;
-    if (!snapshotLoad(create_params, isolate, context, SNAPSHOT_FILE, startupDataLoader)) {
+    SnapshotLoader snapshotLoader(&create_params);
+    if (!snapshotLoader.load(SNAPSHOT_FILE)) {
+        //snapshotLoad(create_params, isolate, context, SNAPSHOT_FILE, startupDataLoader)) {
         TimeTracker tracker;
         auto str = readFile(argv[1]);
         tracker.track("readFile");
-        snapshotCreate(str.c_str(), SNAPSHOT_FILE);
-        assert(snapshotLoad(create_params, isolate, context, SNAPSHOT_FILE, startupDataLoader));
+        SnapshotCreator snapshotCreator;
+        snapshotCreator.create(str.c_str(), SNAPSHOT_FILE);
+        assert(snapshotLoader.load(snapshotCreator.startupData));
     }
+    isolate = snapshotLoader.isolate;
+    timeTracker.track("snapshotLoad total");
 
     {
         v8::Isolate::Scope isolate_scope(isolate);
@@ -127,7 +155,10 @@ int main(int argc, char* argv[]) {
 
         // Create the Context from the snapshot index.
         context = v8::Context::FromSnapshot(isolate, 0).ToLocalChecked();
-        startupDataLoader.freeData();
+        context = snapshotLoader.createContext(0);
+        timeTracker.track("v8::Context::FromSnapshot");
+        snapshotLoader.freeData();
+
         v8::Context::Scope context_scope(context);
 
         // 注入native能力
@@ -151,6 +182,8 @@ int main(int argc, char* argv[]) {
 
         compileAndRun(context, "f(1)");
     }
+
+    timeTracker.report();
 
     // Dispose the isolate and tear down V8.
     isolate->Dispose();

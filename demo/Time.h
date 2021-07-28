@@ -25,7 +25,7 @@ public:
         }
         long lastItemTime = items[0].time;
         for (const auto& item : items) {
-            printf("  %s: elapsed: %ld\n", item.name.c_str(), item.time - lastItemTime);
+            printf("  %s: %ld\n", item.name.c_str(), item.time - lastItemTime);
             lastItemTime = item.time;
         }
         printf("------\n");
