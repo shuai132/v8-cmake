@@ -10,14 +10,14 @@
 
 #define SNAPSHOT_FILE "snapshot.bin"
 
-std::string readFile(const std::string& filePath) {
+static std::string readFile(const std::string& filePath) {
     std::ifstream fs(filePath);
     std::ostringstream ss;
     ss << fs.rdbuf();
     return ss.str();
 }
 
-void writeFile(const void* data, ssize_t size, const std::string& filePath) {
+static void writeFile(const void* data, ssize_t size, const std::string& filePath) {
     std::ofstream fs(filePath, std::ios::binary);
     fs.write((char*)data, size);
     fs.flush();
@@ -81,10 +81,35 @@ public:
     std::string fileData;
     v8::StartupData startupData{};
 };
+void logImpl(const v8::FunctionCallbackInfo<v8::Value> &args) {
+    auto isolate = args.GetIsolate();
+    std::stringstream str;
+    int l = args.Length();
+    for (int i = 0; i < l; i++) {
+        auto s = args[i]->ToString(isolate->GetCurrentContext()).ToLocalChecked();
+        str << " " << *(v8::String::Utf8Value(isolate, s));
+    }
+    const std::string& tempStr = str.str();
+    LOGI("Console1: %s", tempStr.c_str());
+}
+
+void logImpl2(const v8::FunctionCallbackInfo<v8::Value> &args) {
+    auto isolate = args.GetIsolate();
+    std::stringstream str;
+    int l = args.Length();
+    for (int i = 0; i < l; i++) {
+        auto s = args[i]->ToString(isolate->GetCurrentContext()).ToLocalChecked();
+        str << " " << *(v8::String::Utf8Value(isolate, s));
+    }
+    const std::string& tempStr = str.str();
+    LOGI("Console2: %s", tempStr.c_str());
+}
+
 
 class SnapshotCreator {
 public:
-    SnapshotCreator() = default;
+    explicit SnapshotCreator(v8::Isolate::CreateParams* createParams)
+            : createParams(createParams) {}
     SnapshotCreator(const SnapshotCreator&) = delete;
     void operator=(const SnapshotCreator&) = delete;
 
@@ -92,8 +117,8 @@ public:
         using namespace v8;
         TimeTracker tracker;
         Isolate* isolate = Isolate::Allocate();
-        std::vector<intptr_t> external_references = { reinterpret_cast<intptr_t>(nullptr)};
-        v8::SnapshotCreator snapshot_creator(isolate, external_references.data());
+
+        v8::SnapshotCreator snapshot_creator(isolate, createParams->external_references);
         tracker.track("snapshot_creator");
         {
             HandleScope scope(isolate);
@@ -102,6 +127,16 @@ public:
             {
                 Context::Scope context_scope(context);
                 TryCatch try_catch(isolate);
+
+                // 注入native能力
+                {
+                    auto global = context->Global();
+                    v8::Local<v8::Object> console = v8::Object::New(isolate);
+                    console->Set(context, v8::String::NewFromUtf8(isolate, "log").ToLocalChecked(),
+                                 v8::FunctionTemplate::New(isolate, logImpl)->GetFunction(context).ToLocalChecked());
+                    global->Set(context, v8::String::NewFromUtf8(isolate, "console").ToLocalChecked(), console);
+                }
+
                 compileAndRun(context, js);
                 assert(!try_catch.HasCaught());
             }
@@ -118,6 +153,7 @@ public:
     }
 
 public:
+    v8::Isolate::CreateParams* createParams;
     v8::StartupData startupData{};
 };
 
@@ -135,11 +171,17 @@ int main(int argc, char* argv[]) {
 
     v8::Isolate::CreateParams create_params;
     create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+    std::vector<intptr_t> external_references;
+    external_references.push_back(reinterpret_cast<intptr_t>(logImpl));
+//    external_references.push_back(reinterpret_cast<intptr_t>(logImpl2));
+    create_params.external_references = external_references.data();
     v8::Isolate* isolate;
     v8::Local<v8::Context> context;
 
+    LOGI("log addr: %p\n", logImpl);
+
     SnapshotLoader snapshotLoader(&create_params);
-    SnapshotCreator snapshotCreator; // todo: free
+    SnapshotCreator snapshotCreator(&create_params);
     if (!snapshotLoader.load(SNAPSHOT_FILE)) {
         auto str = readFile(argv[1]);
         snapshotCreator.create(str.c_str(), SNAPSHOT_FILE);
@@ -160,25 +202,6 @@ int main(int argc, char* argv[]) {
         snapshotLoader.freeData();
 
         v8::Context::Scope context_scope(context);
-
-        // 注入native能力
-        {
-            auto global = context->Global();
-            v8::Local<v8::Object> console = v8::Object::New(isolate);
-            console->Set(context, v8::String::NewFromUtf8(isolate, "log").ToLocalChecked(),
-                         v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value> &args) {
-                             auto isolate = args.GetIsolate();
-                             std::stringstream str;
-                             int l = args.Length();
-                             for (int i = 0; i < l; i++) {
-                                 auto s = args[i]->ToString(isolate->GetCurrentContext()).ToLocalChecked();
-                                 str << " " << *(v8::String::Utf8Value(isolate, s));
-                             }
-                             const std::string& tempStr = str.str();
-                             LOGI("Console: %s", tempStr.c_str());
-                         })->GetFunction(context).ToLocalChecked());
-            global->Set(context, v8::String::NewFromUtf8(isolate, "console").ToLocalChecked(), console);
-        }
 
         LOGI("!!!");
         compileAndRun(context, "f(1)");
